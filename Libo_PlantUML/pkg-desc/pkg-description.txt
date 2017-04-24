@@ -1,0 +1,6 @@
+PlantUML.oxt
+UML.* : Perform the PlantUML operations
+UML! : Show / Hide the PlantUML code
+
+plantuml.jar must be copied to HOME/plantuml/ where HOME refers to your personal home directory.
+

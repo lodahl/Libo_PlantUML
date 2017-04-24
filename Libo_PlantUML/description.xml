@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<description
+ xmlns="http://openoffice.org/extensions/description/2006"
+ xmlns:dep="http://openoffice.org/extensions/description/2006"
+ xmlns:xlink="http://www.w3.org/1999/xlink">
+	<identifier value="dk.lodahl.plantUML"/>
+	<version value="1.0.0"/>
+<dependencies>
+		<OpenOffice.org-minimal-version value="4.1" dep:name="LibreOffice 2.1 is the minimum version."/>
+	</dependencies> 
+<registration>
+<simple-license accept-by="user" default-license-id="en-US" suppress-on-update="true" >
+<license-text xlink:href="License-text.txt" lang="en-US" license-id="en-US" />
+</simple-license>
+</registration>
+<display-name>
+    <name lang="en-US">PlantUML in LibreOffice</name>
+
+  </display-name>
+
+  <publisher>
+
+    <name xlink:href="lodahl.blogspot.com" 
+    lang="en">Leif Lodahl</name>
+  </publisher>
+ 
+ 
+  <icon>
+    <default xlink:href="icons/logo.png" />
+    <high-contrast xlink:href="icons/logo.png" />
+  </icon>
+
+
+
+</description>
