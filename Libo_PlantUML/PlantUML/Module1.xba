@@ -10,13 +10,15 @@
 &apos;
 
 Sub Main
-	PlantUMLAll
+
+ UpdateProgressBar(1,2)
+	&apos;PlantUMLAll
 	&apos;PlantUMLToggle
 End Sub
 
 
 &apos; These are currently left as global variable. That is not the right solution!
-Dim oProgressBarModel as Object
+
 Dim oContWin as object
 
 
@@ -136,6 +138,7 @@ Sub PlantUMLAll
 	    End If
 
 		vSelection = vOpenFound
+	
 		vSelection.GotoRange(vCloseFound,True)
 		IF CheckExtraOpen( vSelection ) Then
 			MsgBox( &quot;Found extra @startuml between @startuml and @enduml&quot;, 64, &quot;PlantUML&quot; )
@@ -158,9 +161,7 @@ Sub PlantUMLAll
 	&apos; Going to second round
 	Dim iSelectionIndex as Integer : iSelectionIndex  = 0
 	
-	CreateProgressDialog( iSelectionCount )
-	
-	Wait 100
+
 
 	&apos; Second round, do the actual work
 	vOpenFound = oDoc.findFirst(vOpenSearch)
@@ -172,7 +173,7 @@ Sub PlantUMLAll
 		
 		iSelectionIndex = iSelectionIndex  + 1
 		UpdateProgressBar(iSelectionIndex, iSelectionCount )
-		Wait 100
+		&apos;Wait 100
 
 		If (Not fCursorFound) OR CheckForCursor( vSelection ) Then
 
@@ -239,23 +240,20 @@ Sub PlantUMLAll
 			End If
 		End If
 
-		IF NOT CheckDialogOpen Then
-			MsgBox( &quot;Dialog closed, aborting!&quot;, 64, &quot;PlantUML&quot; )
-			Exit Sub
-		End IF
+
 
 		vOpenFound = oDoc.FindNext( vCloseFound.End, vOpenSearch )
 	WEnd
-	CloseProgressDialog()
+	ProgressBar.reset()
 	Exit Sub
 
 ErrorHandler:
-	CloseProgressDialog()
+
 	MsgBox( &quot;An error occurred. Check HOME/plantuml/plantuml.txt and HOME/plantuml/plantuml.png for further info&quot;, 64, &quot;PlantUML&quot; )
 	Exit Sub
 
 JavaErrorHandler:
-	CloseProgressDialog()
+
 	MsgBox( &quot;Failed to execute java or plantuml. Check java and plantuml.jar installation in: &quot; &amp; ConvertFromURL(pmxPlantUmlDir()) &amp; &quot;plantuml.jar&quot;, 64, &quot;PlantUML&quot; )
 	Exit Sub
 
@@ -546,56 +544,7 @@ Sub CreateParStyle(sStyleName$, oProps())
 End Sub
 
 
-Sub CreateProgressDialog( count as integer )
-	oDialogModel = createUnoService( &quot;com.sun.star.awt.UnoControlDialogModel&quot;)
-	
-	oProgressBarModel = oDialogModel.createInstance( &quot;com.sun.star.awt.UnoControlProgressBarModel&quot; )
-	
-	oProgressBarModel.PositionX = 0
-	oProgressBarModel.PositionY = 0
-	oProgressBarModel.Width = 140
-	oProgressBarModel.Height = 15
-	oProgressBarModel.ProgressValueMin = 0
-	oProgressBarModel.ProgressValueMax = count
-	oProgressBarModel.ProgressValue = 0
-	
-	&apos; insert the controls models into the dialog model
-	oDialogModel.insertByName( &quot;myProgressBarName&quot;, oProgressBarModel )
-	
-	&apos; create the dialog control and set the model
-	oDialog = createUnoService( &quot;com.sun.star.awt.UnoControlDialog&quot;)
-	oDialog.setModel( oDialogModel ) 
-	oProgressBarControl = oDialog.Controls(0)
-	
-	&apos; now generate the container Window
-	oToolkit = createUnoService(&quot;com.sun.star.awt.Toolkit&quot;)
-	
-	Dim rBounds as new com.sun.star.awt.Rectangle
-	rBounds.X = 0
-	rBounds.Y = 0
-	rBounds.width  = oProgressBarControl.PosSize.Width
-	rBounds.height = oProgressBarControl.PosSize.Height
-	
-	Dim wd as new com.sun.star.awt.WindowDescriptor
-	wd.Type = com.sun.star.awt.WindowClass.TOP
-	wd.Bounds = rBounds
-	with com.sun.star.awt.WindowAttribute
-	  wd.WindowAttributes = .BORDER + .MOVEABLE + .SIZEABLE + .CLOSEABLE
-	end with
-	wd.WindowServiceName = &quot;dialog&quot;
-	oContWin = oToolkit.createWindow(wd)
-	
-	&apos;now put it into a frame. This is to be able to close it.
-	oFrame = createUnoService(&quot;com.sun.star.frame.Frame&quot;)
-	oFrame.initialize(oContWin)
-	StarDesktop.Frames.append(oFrame)
-	oFrame.Name = &quot;PlantUMLFrame&quot;
-	
-	&apos;last but not least let the progress bar show itself with the container window as the parent
-	oProgressBarControl.createPeer(oToolkit, oContWin)
-	oContWin.Title = &quot;Preparing PlantUML&quot;
-	oContWin.setVisible(True)
-End Sub
+
 
 
 Function CheckDialogOpen() AS BOOLEAN
@@ -610,27 +559,25 @@ Function CheckDialogOpen() AS BOOLEAN
 End Function
 
 
-Sub CloseProgressDialog
-	Dim k as integer
-	for k= StarDesktop.Frames.Count-1 to 0 step -1
-		oF = StarDesktop.Frames.getByIndex(k)
-		if oF.Name = &quot;PlantUMLFrame&quot; then
-			oF.dispose
-		endif
-	next k
-End Sub
+
 
 Sub UpdateProgressBar( index as integer, count as integer )
-	Dim k as integer
-	for k= StarDesktop.Frames.Count-1 to 0 step -1
-		oF = StarDesktop.Frames.getByIndex(k)
-		if oF.Name = &quot;PlantUMLFrame&quot; then
-			&apos; If the parent frame still exists, then we take the chance that the kids also exist
-			oProgressBarModel.ProgressValue = index	
-			oContWin.Title = &quot;PlantUML diagram: &quot; &amp; index &amp; &quot; of &quot; &amp; count
-		endif
-	next k
+
+			StatusText(&quot;PlantUML: &quot; &amp;  index &amp; &quot; / &quot; &amp; count )
+
 End Sub
 
+Sub StatusText(TextToWrite as String)
+  Dim iLen As Integer
+  Dim iRest as Integer
+  
+  iLen = Len(TextToWrite)
+  iRest = 270-iLen
+  ProgressBar.start(TextToWrite+SPACE(iRest),0)
 
+End Sub
+
+Function ProgressBar
+  ProgressBar = ThisComponent.CurrentController.StatusIndicator
+End Function
 </script:module>
