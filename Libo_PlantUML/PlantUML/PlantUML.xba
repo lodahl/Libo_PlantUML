@@ -1,0 +1,583 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE script:module PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "module.dtd">
+<script:module xmlns:script="http://openoffice.org/2000/script" script:name="PlantUML" script:language="StarBasic">&apos;
+&apos; PlantUML in OOo Writer
+&apos;
+&apos; Copyright (C) 2010 Poul Bondo
+&apos;
+&apos; License:
+&apos; Most of the stuff is from Andrew Pitonyak&apos;s book with the Public Documentation License Version 1.0
+&apos;
+
+Sub Main
+
+ UpdateProgressBar(1,2)
+	&apos;PlantUMLAll
+	&apos;PlantUMLToggle
+End Sub
+
+
+&apos; These are currently left as global variable. That is not the right solution!
+
+Dim oContWin as object
+
+
+&apos; Check if the cursor is collapsed and inside the uml text selection
+&apos;
+Function CheckForCursor( vSelection )
+	Dim oSels
+	Dim oSel
+	Dim oCursor
+
+	CheckForCursor = FALSE
+	oSels = ThisComponent.getCurrentSelection()
+	If IsNull(oSels) Then Exit Function
+	
+	If oSels.getCount() &lt;&gt; 1 Then
+		Exit Function
+	End If
+
+	oSel = oSels.getByIndex(0)
+    oCursor = oSel.getText().CreateTextCursorByRange(oSel)
+    If oCursor.IsCollapsed() Then
+		Dim mystart
+		mystart = vSelection.getStart()
+		If ThisComponent.Text.compareRegionStarts( vSelection.getStart(), oCursor ) &gt; 0 Then
+			If ThisComponent.Text.compareRegionEnds( vSelection.getEnd(), oCursor ) &lt; 0 Then
+				CheckForCursor = TRUE
+			Endif
+		Endif
+	End If
+End Function
+
+
+&apos; This function will toggle the show/hide uml text for the PlantUML paragraph style
+&apos; Unfortunately if we do the actual hide, so will the graphics.
+&apos; Therefore we resize font to 1 and color white
+Sub PlantUMLToggle
+  Dim oFamilies
+  Dim oStyle
+  Dim oStyles
+  Dim tabStops%
+  
+  oFamilies = ThisComponent.StyleFamilies
+  oStyles = oFamilies.getByName(&quot;ParagraphStyles&quot;)
+  If oStyles.HasByName(&quot;PlantUML&quot;) Then
+    oStyle = oStyles.getByName(&quot;PlantUML&quot;)
+    oStyle.CharHidden = NOT oStyle.CharHidden
+  End If
+End Sub
+
+
+Function pmxPlantUmlDir() As String
+	Dim  oPathSettings
+	oPathSettings = CreateUnoService(&quot;com.sun.star.util.PathSettings&quot;)
+
+	&apos; c:\documents and settings\&lt;username&gt;\plantuml\
+	&apos; /home/&lt;username&gt;/plantuml/
+	pmxPlantUmlDir = oPathSettings.Work &amp; &quot;/plantuml/&quot;
+End Function
+
+
+&apos; This is the main function
+&apos; It will search through all the text looking for matching @startuml / @enduml
+&apos;
+&apos; For each hit it will write a temp file, apply a paragraph style
+&apos; execute the java plantuml command, delete any old graphics and
+&apos; insert the new graphics
+Sub PlantUMLAll
+
+	Dim vOpenSearch, vCloseSearch as Object
+	Dim vOpenFound, vCloseFound as Object
+	Dim vSelection as object
+	Dim umltext as String
+	Dim oDoc as object
+	Dim fCorsorFound as Boolean				&apos; Cursor is inside @startuml/@enduml, thus we only update one diagram
+	Dim iSelectionCount as Integer			&apos; Number of @startuml/@enduml pairs found in the document
+
+	&apos; Any better way than this ?
+	Dim javacmd as String
+	If GetGUIType=1 Then
+		javacmd = &quot;java.exe&quot;	&apos; Windows
+	Else
+		javacmd = &quot;java&quot;		&apos; Other than Windows
+	End If
+
+	fCursorFound = FALSE
+	iSelectionCount = 0
+
+	oDoc = ThisComponent
+	
+    On Error Goto JavaErrorHandler
+    
+    If Not FileExists( pmxPlantUmlDir() &amp; &quot;/plantuml.jar&quot; ) Then Goto JavaErrorHandler
+	
+	Shell( javacmd, 2, &quot; -version&quot;, TRUE )
+
+	On Error Goto ErrorHandler
+
+	Dim oProps()
+	CreateParStyle( &quot;PlantUML&quot;, oProps )
+
+	&apos; Create search parameters &quot;@startuml&quot;
+    vOpenSearch = oDoc.createSearchDescriptor
+	vCloseSearch = oDoc.createSearchDescriptor
+    vOpenSearch.SearchString = &quot;@startuml&quot;
+	vCloseSearch.SearchString = &quot;@enduml&quot;
+
+
+	&apos; First round:
+	&apos; - Validate syntax, i.e. matching @startuml and @enduml
+	vOpenFound = oDoc.findFirst(vOpenSearch)
+	while Not isNull(vOpenFound)
+		vCloseFound = oDoc.FindNext(vOpenFound.End, vCloseSearch)
+
+		If IsNull( vCloseFound ) Then
+			MsgBox( &quot;Found an open @startuml without closing @enduml&quot;, 64, &quot;PlantUML&quot; )
+			Exit Sub
+	    End If
+
+		vSelection = vOpenFound
+	
+		vSelection.GotoRange(vCloseFound,True)
+		IF CheckExtraOpen( vSelection ) Then
+			MsgBox( &quot;Found extra @startuml between @startuml and @enduml&quot;, 64, &quot;PlantUML&quot; )
+			Exit Sub
+		End If
+
+		If fCursorFound = FALSE Then
+			fCursorFound = CheckForCursor( vSelection )
+		End If
+		
+		iSelectionCount = iSelectionCount + 1
+		vOpenFound = oDoc.FindNext( vCloseFound.End, vOpenSearch )
+	WEnd
+
+	IF iSelectionCount = 0 Then
+		MsgBox( &quot;No @startuml / @enduml found. Text may be hidden, try UML! button&quot;, 64, &quot;PlantUML&quot; )
+		Exit Sub
+	End If
+
+	&apos; Going to second round
+	Dim iSelectionIndex as Integer : iSelectionIndex  = 0
+	
+
+
+	&apos; Second round, do the actual work
+	vOpenFound = oDoc.findFirst(vOpenSearch)
+	while Not isNull(vOpenFound)
+		vCloseFound = oDoc.FindNext(vOpenFound.End, vCloseSearch)
+
+		vSelection = vOpenFound
+		vSelection.GotoRange(vCloseFound,True)
+		
+		iSelectionIndex = iSelectionIndex  + 1
+		UpdateProgressBar(iSelectionIndex, iSelectionCount )
+		&apos;Wait 100
+
+		If (Not fCursorFound) OR CheckForCursor( vSelection ) Then
+
+			Dim tempFile
+			tempFile = pmxPlantUmlDir() &amp; &quot;plantuml&quot;
+			
+			WriteTempFile( vSelection, tempFile &amp; &quot;.txt&quot;  )
+
+			Dim shellparam as String
+			shellparam =  &quot; -jar &quot;&quot;&quot; &amp; ConvertFromURL( tempFile ) &amp; &quot;.jar&quot;&quot; -charset UTF-8 &quot;&quot;&quot; &amp; ConvertFromURL( tempFile ) &amp; &quot;.txt&quot;&quot;&quot;
+
+			Shell( javacmd, 2, shellparam, TRUE )
+
+			RemovePreviousGraphics( vSelection )
+
+			Dim myUrl$
+			myUrl$ = ConvertToURL( tempFile &amp; &quot;.png&quot; )
+		    If FileExists(myUrl) Then
+
+				Dim oPar		&apos; Current paragraph
+				Dim oParEnum	&apos; List of paragraphs
+				Dim oParPrev	&apos; The previous paragraph
+				Dim oParPrevLength as Integer
+				oParPrevLength = 0
+				
+
+				&apos; First run. Set all paragraph styles to &quot;PlantUML&quot; and 
+				&apos; make sure there is an empty line at the end.
+			  	oParEnum = vSelection.createEnumeration()
+				While oParEnum.hasMoreElements()
+					oPar = oParEnum.nextElement()
+
+					If oPar.supportsService(&quot;com.sun.star.text.Paragraph&quot;) Then
+						oPar.ParaStyleName = &quot;PlantUML&quot;
+
+						IF NOT oParEnum.hasMoreElements() Then
+							IF oParPrevLength &gt; 0 Then
+								Dim oText
+								oText = ThisComponent.getText()
+								oText.insertControlCharacter( oPar, com.sun.star.text.ControlCharacter.PARAGRAPH_BREAK, False)
+							End If
+						End If
+					End If
+					oParPrevLength = Len( oPar.getString() )
+				WEnd
+
+				&apos; Second run. Set the last empty line paragraph style to &quot;Default&quot;
+				&apos; Mark this last paragraph for use in EmbedGraphic
+			  	oParEnum = vSelection.createEnumeration()
+				While oParEnum.hasMoreElements()
+					oPar = oParEnum.nextElement()
+					IF NOT oParEnum.hasMoreElements() Then
+						If oPar.supportsService(&quot;com.sun.star.text.Paragraph&quot;) Then
+							oParPrev.ParaStyleName = &quot;Standard&quot;
+							&apos;oParPrev.ParaStyleName = &quot;Default&quot;
+						End If
+					Else
+						oParPrev = oPar
+					End If
+				WEnd
+				If Not IsNull( oParPrev ) Then
+					EmbedGraphic(oDoc, oParPrev.getStart(), myUrl, &quot;OOoFigure&quot;)
+				End If
+			End If
+		End If
+
+
+
+		vOpenFound = oDoc.FindNext( vCloseFound.End, vOpenSearch )
+	WEnd
+	ProgressBar.reset()
+	Exit Sub
+
+ErrorHandler:
+
+	MsgBox( &quot;An error occurred. Check HOME/plantuml/plantuml.txt and HOME/plantuml/plantuml.png for further info&quot;, 64, &quot;PlantUML&quot; )
+	Exit Sub
+
+JavaErrorHandler:
+
+	MsgBox( &quot;Failed to execute java or plantuml. Check java and plantuml.jar installation in: &quot; &amp; ConvertFromURL(pmxPlantUmlDir()) &amp; &quot;plantuml.jar&quot;, 64, &quot;PlantUML&quot; )
+	Exit Sub
+
+End Sub
+
+
+&apos; This function check whether there is another @startuml with a set of
+&apos; @startuml .... @enduml
+&apos; The reason being that a misspelled @enduml would result in an error
+&apos;
+Function CheckExtraOpen( oCurs ) AS Boolean
+	Dim mytext
+	mytext = oCurs.getString()
+	mytext = Right( mytext, Len(mytext)-1 )
+
+	ResultValue = InStr( mytext, &quot;@startuml&quot; )
+	if ResultValue = 0 Then
+		CheckExtraOpen = FALSE
+	Else
+		CheckExtraOpen = TRUE
+	End If
+End Function
+
+
+&apos; This function will save a single diagram text to the temp file.
+&apos; Notice that &quot;@startuml img/something.png&quot; is replaced by &quot;@startuml&quot;
+&apos;
+Sub WriteTempFile( oCurs, fileName )
+	Dim mytext
+	Dim oPar
+	Dim oParEnum
+	Dim count
+
+	mytext = &quot;@startuml&quot; &amp; chr(10)
+	count = 0
+  	oParEnum = oCurs.createEnumeration()
+	While oParEnum.hasMoreElements()
+		oPar = oParEnum.nextElement()
+
+		If oPar.supportsService(&quot;com.sun.star.text.Paragraph&quot;) Then
+			If count &gt; 0 Then
+				mytext = mytext &amp; oPar.getString() &amp; chr(10)
+			End If
+			count = count + 1
+		End If
+	WEnd	
+
+	&apos; Save the contents of mytext to file
+	fileAccessService = createUnoService(&quot;com.sun.star.ucb.SimpleFileAccess&quot;)
+	textOutputStream = createUnoService(&quot;com.sun.star.io.TextOutputStream&quot;)
+	outputStream = fileAccessService.openFileWrite( filename )
+	outputStream.truncate()
+	textOutputStream.setOutputStream(outputStream)	
+	textOutputStream.writeString( mytext )
+	textOutputStream.closeOutput()
+End Sub
+
+
+&apos; This function will replace the paragraph style to plantuml for all text inside
+&apos; the @startuml ... @enduml
+&apos;
+&apos; This is no longer used!
+Sub ApplyStyle( oCurs )
+
+	Dim oPar
+	Dim oParEnum
+
+  	oParEnum = oCurs.createEnumeration()
+	While oParEnum.hasMoreElements()
+		oPar = oParEnum.nextElement()
+
+		If oPar.supportsService(&quot;com.sun.star.text.Paragraph&quot;) Then
+			oPar.ParaStyleName = &quot;PlantUML&quot;
+		End If
+	WEnd	
+End Sub
+
+
+&apos; This function is taken from Andrews macro book.
+&apos;
+&apos; Removed some stuff, to only check for the graphics we expect
+Sub RemovePreviousGraphics( oCurs )
+
+	Dim oParEnum	&apos;Enumerator used to enumerate the paragraphs
+	Dim oPar		&apos;The enumerated paragraph
+	Dim oSectEnum	&apos;Enumerator used to enumerate the text sections
+	Dim oSect		&apos;The enumerated text section
+	Dim oCEnum		&apos;Enum content, such as graphics objects
+	Dim oContent	&apos;The numerated content
+	Dim textGraphService$, textCService$
+
+	textGraphService$ = &quot;com.sun.star.text.TextGraphicObject&quot;
+	textCService$     = &quot;com.sun.star.text.TextContent&quot;
+	
+	REM Enumerate the paragraphs.
+	REM Tables are enumerated along with paragraphs
+	oParEnum = oCurs.createEnumeration()
+	Do While oParEnum.hasMoreElements()
+    	oPar = oParEnum.nextElement()
+
+		REM This avoids the tables. Add an else statement if you want to
+		REM process the tables.
+		If oPar.supportsService(&quot;com.sun.star.text.Paragraph&quot;) Then
+		  
+			REM Typically, I use an empty string to enumerate ALL content,
+			REM but this causes a runtime error here. If any graphics
+			REM images are present, then they are enumerated as TextContent.
+			oCEnum = oPar.createContentEnumeration(textCService$)
+			Do While oCEnum.hasMoreElements()
+				oContent = oCEnum.nextElement()
+				If oContent.supportsService(textGraphService$) Then
+					ThisComponent.getDrawPage().remove(oContent)
+				End If
+			Loop
+			
+		End If
+	Loop
+End Sub
+
+
+&apos; This function is taken from Andrews macro book
+&apos;
+Function RecommendGraphSize( oDoc, oCurs, oGraph)
+  Dim oSize
+  Dim lMaxW As Double  &apos; Maximum width in 100th mm
+  Dim lMaxH As Double  &apos; Maximum height in 100th mm
+
+  lMaxW = 6.75 * 2540 &apos; 6.75 inches
+  lMaxH = 9.5 * 2540  &apos; 9.5 inches
+  
+  If IsNull(oGraph) OR IsEmpty(oGraph) Then
+    Exit Function
+  End If
+  oSize = oGraph.Size100thMM
+  If oSize.Height = 0 OR oSize.Width = 0 Then
+    &apos; 2540 is 25.40 mm in an inch, but I need 100th mm.
+    &apos; There are 1440 twips in an inch
+    oSize.Height = oGraph.SizePixel.Height * 2540.0 * TwipsPerPixelY() / 1440
+    oSize.Width = oGraph.SizePixel.Width * 2540.0 * TwipsPerPixelX() / 1440
+  End If
+  If oSize.Height = 0 OR oSize.Width = 0 Then
+    &apos;oSize.Height = 2540
+    &apos;oSize.Width = 2540
+    Exit Function
+  End If
+  
+
+  Dim oStyle
+  Dim sPageStyleName$
+  DIM oPageStyles
+
+  sPageStyleName = oCurs.PageStyleName
+  oPageStyles = ThisComponent.StyleFamilies.getByName(&quot;PageStyles&quot;)
+  oStyle = oPageStyles.getByName(sPageStyleName)
+
+  lMaxW = oStyle.Width - oStyle.LeftMargin - oStyle.RightMargin
+  lMaxH = oStyle.Height - oStyle.TopMargin - oStyle.BottomMargin
+  If oStyle.HeaderIsOn Then
+    If NOT oStyle.HeaderIsDynamicHeight And NOT IsNull( oStyle.HeaderHeight ) Then
+      lMaxH = lMaxH - oStyle.HeaderHeight
+    End If
+  End If
+  If oStyle.FooterIsOn Then
+    If NOT oStyle.FooterIsDynamicHeight And NOT IsNull( oStyle.FooterHeight ) Then
+      lMaxH = lMaxH - oStyle.FooterHeight
+    End If
+  End If
+  
+  If oSize.Width &gt; lMaxW Then
+    oSize.Height = oSize.Height * lMaxW / oSize.Width
+    oSize.Width = lMaxW
+  End If
+  If oSize.Height &gt; lMaxH Then
+    oSize.Width = oSize.Width * lMaxH / oSize.Height
+    oSize.Height = lMaxH
+  End If
+  RecommendGraphSize = oSize
+End Function
+
+
+
+&apos; oDoc - document to contain the image. 
+&apos; oCurs - Cursor where the image is added
+&apos; sURL - URL of the image to insert.
+&apos; sParStyle - set the paragraph style to this.
+&apos; This function is taken from Andrews macro book. Changed anchor to paragraph.
+&apos;
+Sub EmbedGraphic(oDoc, oCurs, sURL$, sParStyle$)
+  Dim oShape
+  Dim oGraph     &apos;The graphic object is text content.
+  Dim oProvider  &apos;GraphicProvider service.
+  Dim oText
+
+  oShape = oDoc.createInstance(&quot;com.sun.star.drawing.GraphicObjectShape&quot;)
+  oGraph = oDoc.createInstance(&quot;com.sun.star.text.GraphicObject&quot;)
+
+  oDoc.getDrawPage().add(oShape)
+
+  oProvider = createUnoService(&quot;com.sun.star.graphic.GraphicProvider&quot;)
+
+  Dim oProps(0) as new com.sun.star.beans.PropertyValue
+  oProps(0).Name  = &quot;URL&quot;
+  oProps(0).Value = sURL
+
+  REM Save the original size.
+  Dim oSize100thMM
+  Dim lHeight As Long
+  Dim lWidth As Long
+  oSize100thMM = RecommendGraphSize(oDoc, oCurs, oProvider.queryGraphicDescriptor(oProps))
+  If NOT IsNull(oSize100thMM) AND NOT IsEmpty(oSize100thMM) Then
+    lHeight = oSize100thMM.Height
+    lWidth = oSize100thMM.Width
+  End If
+
+
+  oShape.Graphic = oProvider.queryGraphic(oProps())
+  oGraph.graphicurl = oShape.graphicurl
+  oGraph.AnchorType = com.sun.star.text.TextContentAnchorType.AT_PARAGRAPH
+  oGraph.TextWrap = com.sun.star.text.WrapTextMode.NONE 
+  oGraph.HoriOrient = com.sun.star.text.HoriOrientation.CENTER
+
+  oText= oCurs.getText()
+  oText.insertTextContent(oCurs, oGraph, false)
+  oDoc.getDrawPage().remove(oShape)
+
+  If lHeight &gt; 0 AND lWidth &gt; 0 Then
+    Dim oSize
+    oSize = oGraph.Size
+    oSize.Height = lHeight
+    oSize.Width = lWidth
+    oGraph.Size = oSize
+  End If
+  
+  &apos; Set the paragraph style if it is in the document.
+  Dim oStyles
+  oStyles = oDoc.StyleFamilies.getByName(&quot;ParagraphStyles&quot;)
+  If oStyles.hasByName(sParStyle) Then
+    oCurs.ParaStyleName = sParStyle
+  End If
+End Sub
+
+
+&apos; This function is taken from Andrews macro book.
+&apos;
+Sub CreateParStyle(sStyleName$, oProps())
+  Dim i%, j%
+  Dim oFamilies
+  Dim oStyle
+  Dim oStyles
+  Dim tabStops%
+  
+  oFamilies = ThisComponent.StyleFamilies
+  oStyles = oFamilies.getByName(&quot;ParagraphStyles&quot;)
+  If oStyles.HasByName(sStyleName) Then
+    Exit Sub
+  End If
+  oStyle = ThisComponent.createInstance(&quot;com.sun.star.style.ParagraphStyle&quot;)
+  For i=LBound(oProps) To UBound(oProps)
+    If oProps(i).Name = &quot;ParentStyle&quot; Then
+      If oStyles.HasByName(oProps(i).Value) Then
+        oStyle.ParentStyle = oProps(i).Value
+      Else
+        Print &quot;Parent paragraph style (&quot; &amp; oProps(i).Value &amp; _
+              &quot;) does not exist, ignoring parent&quot;
+      End If
+    ElseIf oProps(i).Name = &quot;ParaTabStops&quot; Then
+      tabStops = oProps(i).Value
+      Dim tab(0 To 19) As New com.sun.star.style.TabStop
+      For j =LBound(tab) To UBound(tab)
+        tab(j).Alignment = com.sun.star.style.TabAlign.LEFT
+        tab(j).DecimalChar = ASC(&quot;.&quot;)
+        tab(j).FillChar = 32
+        tab(j).Position = (j+1) * tabStops
+      Next
+      oStyle.ParaTabStops = tab
+    ElseIf oProps(i).Name = &quot;FollowStyle&quot; Then
+      If oStyles.HasByName(oProps(i).Value) OR oProps(i).Value = sStyleName Then
+        oStyle.setPropertyValue(oProps(i).Name, oProps(i).Value)
+      Else
+        Print &quot;Next paragraph style (&quot; &amp; oProps(i).Value &amp; _
+              &quot;) does not exist, ignoring for style &quot; &amp; sStyleName
+      End If
+    Else
+      oStyle.setPropertyValue(oProps(i).Name, oProps(i).Value)
+    End If
+  Next
+  oStyles.insertByName(sStyleName, oStyle)
+End Sub
+
+
+
+
+
+Function CheckDialogOpen() AS BOOLEAN
+	Dim i as integer
+	CheckDialogOpen = FALSE
+	for i= StarDesktop.Frames.Count-1 to 0 step -1
+	  oF = StarDesktop.Frames.getByIndex(i)
+	  if oF.Name = &quot;PlantUMLFrame&quot; then
+	    CheckDialogOpen = TRUE
+	  endif
+	next i
+End Function
+
+
+
+
+Sub UpdateProgressBar( index as integer, count as integer )
+
+			StatusText(&quot;PlantUML: &quot; &amp;  index &amp; &quot; / &quot; &amp; count )
+
+End Sub
+
+Sub StatusText(TextToWrite as String)
+  Dim iLen As Integer
+  Dim iRest as Integer
+  
+  iLen = Len(TextToWrite)
+  iRest = 270-iLen
+  ProgressBar.start(TextToWrite+SPACE(iRest),0)
+
+End Sub
+
+Function ProgressBar
+  ProgressBar = ThisComponent.CurrentController.StatusIndicator
+End Function
+</script:module>
