@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE script:module PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "module.dtd">
 <script:module xmlns:script="http://openoffice.org/2000/script" script:name="PlantUML" script:language="StarBasic">&apos;
-&apos; PlantUML in OOo Writer
+&apos; PlantUML in LibreOffice Writer
 &apos;
 &apos; Copyright (C) 2010 Poul Bondo
-&apos;
-&apos; License:
-&apos; Most of the stuff is from Andrew Pitonyak&apos;s book with the Public Documentation License Version 1.0
+&apos; Copyright (C) 2017 Leif Lodahl
 &apos;
 
 Sub Main
@@ -23,6 +21,51 @@ Dim oContWin as object
 
 
 &apos; Check if the cursor is collapsed and inside the uml text selection
+
+Sub CreateParStyle(sStyleName$, oProps())
+  Dim i%, j%
+  Dim oFamilies
+  Dim oStyle
+  Dim oStyles
+  Dim tabStops%
+  
+  oFamilies = ThisComponent.StyleFamilies
+  oStyles = oFamilies.getByName(&quot;ParagraphStyles&quot;)
+  If oStyles.HasByName(sStyleName) Then
+    Exit Sub
+  End If
+  oStyle = ThisComponent.createInstance(&quot;com.sun.star.style.ParagraphStyle&quot;)
+  For i=LBound(oProps) To UBound(oProps)
+    If oProps(i).Name = &quot;ParentStyle&quot; Then
+      If oStyles.HasByName(oProps(i).Value) Then
+        oStyle.ParentStyle = oProps(i).Value
+      Else
+        Print &quot;Parent paragraph style (&quot; &amp; oProps(i).Value &amp; _
+              &quot;) does not exist, ignoring parent&quot;
+      End If
+    ElseIf oProps(i).Name = &quot;ParaTabStops&quot; Then
+      tabStops = oProps(i).Value
+      Dim tab(0 To 19) As New com.sun.star.style.TabStop
+      For j =LBound(tab) To UBound(tab)
+        tab(j).Alignment = com.sun.star.style.TabAlign.LEFT
+        tab(j).DecimalChar = ASC(&quot;.&quot;)
+        tab(j).FillChar = 32
+        tab(j).Position = (j+1) * tabStops
+      Next
+      oStyle.ParaTabStops = tab
+    ElseIf oProps(i).Name = &quot;FollowStyle&quot; Then
+      If oStyles.HasByName(oProps(i).Value) OR oProps(i).Value = sStyleName Then
+        oStyle.setPropertyValue(oProps(i).Name, oProps(i).Value)
+      Else
+        Print &quot;Next paragraph style (&quot; &amp; oProps(i).Value &amp; _
+              &quot;) does not exist, ignoring for style &quot; &amp; sStyleName
+      End If
+    Else
+      oStyle.setPropertyValue(oProps(i).Name, oProps(i).Value)
+    End If
+  Next
+  oStyles.insertByName(sStyleName, oStyle)
+End Sub
 &apos;
 Function CheckForCursor( vSelection )
 	Dim oSels
@@ -239,12 +282,9 @@ Sub PlantUMLAll
 				End If
 			End If
 		End If
-
-
-
 		vOpenFound = oDoc.FindNext( vCloseFound.End, vOpenSearch )
 	WEnd
-	ProgressBar.reset()
+	ThisComponent.CurrentController.StatusIndicator.end()
 	Exit Sub
 
 ErrorHandler:
@@ -302,13 +342,8 @@ Sub WriteTempFile( oCurs, fileName )
 	WEnd	
 
 	&apos; Save the contents of mytext to file
-	fileAccessService = createUnoService(&quot;com.sun.star.ucb.SimpleFileAccess&quot;)
-	textOutputStream = createUnoService(&quot;com.sun.star.io.TextOutputStream&quot;)
-	outputStream = fileAccessService.openFileWrite( filename )
-	outputStream.truncate()
-	textOutputStream.setOutputStream(outputStream)	
-	textOutputStream.writeString( mytext )
-	textOutputStream.closeOutput()
+	SaveFile (mytext, filename)
+
 End Sub
 
 
@@ -435,149 +470,12 @@ End Function
 
 
 
-&apos; oDoc - document to contain the image. 
-&apos; oCurs - Cursor where the image is added
-&apos; sURL - URL of the image to insert.
-&apos; sParStyle - set the paragraph style to this.
-&apos; This function is taken from Andrews macro book. Changed anchor to paragraph.
-&apos;
-Sub EmbedGraphic(oDoc, oCurs, sURL$, sParStyle$)
-  Dim oShape
-  Dim oGraph     &apos;The graphic object is text content.
-  Dim oProvider  &apos;GraphicProvider service.
-  Dim oText
-
-  oShape = oDoc.createInstance(&quot;com.sun.star.drawing.GraphicObjectShape&quot;)
-  oGraph = oDoc.createInstance(&quot;com.sun.star.text.GraphicObject&quot;)
-
-  oDoc.getDrawPage().add(oShape)
-
-  oProvider = createUnoService(&quot;com.sun.star.graphic.GraphicProvider&quot;)
-
-  Dim oProps(0) as new com.sun.star.beans.PropertyValue
-  oProps(0).Name  = &quot;URL&quot;
-  oProps(0).Value = sURL
-
-  REM Save the original size.
-  Dim oSize100thMM
-  Dim lHeight As Long
-  Dim lWidth As Long
-  oSize100thMM = RecommendGraphSize(oDoc, oCurs, oProvider.queryGraphicDescriptor(oProps))
-  If NOT IsNull(oSize100thMM) AND NOT IsEmpty(oSize100thMM) Then
-    lHeight = oSize100thMM.Height
-    lWidth = oSize100thMM.Width
-  End If
-
-
-  oShape.Graphic = oProvider.queryGraphic(oProps())
-  oGraph.graphicurl = oShape.graphicurl
-  oGraph.AnchorType = com.sun.star.text.TextContentAnchorType.AT_PARAGRAPH
-  oGraph.TextWrap = com.sun.star.text.WrapTextMode.NONE 
-  oGraph.HoriOrient = com.sun.star.text.HoriOrientation.CENTER
-
-  oText= oCurs.getText()
-  oText.insertTextContent(oCurs, oGraph, false)
-  oDoc.getDrawPage().remove(oShape)
-
-  If lHeight &gt; 0 AND lWidth &gt; 0 Then
-    Dim oSize
-    oSize = oGraph.Size
-    oSize.Height = lHeight
-    oSize.Width = lWidth
-    oGraph.Size = oSize
-  End If
-  
-  &apos; Set the paragraph style if it is in the document.
-  Dim oStyles
-  oStyles = oDoc.StyleFamilies.getByName(&quot;ParagraphStyles&quot;)
-  If oStyles.hasByName(sParStyle) Then
-    oCurs.ParaStyleName = sParStyle
-  End If
-End Sub
-
-
-&apos; This function is taken from Andrews macro book.
-&apos;
-Sub CreateParStyle(sStyleName$, oProps())
-  Dim i%, j%
-  Dim oFamilies
-  Dim oStyle
-  Dim oStyles
-  Dim tabStops%
-  
-  oFamilies = ThisComponent.StyleFamilies
-  oStyles = oFamilies.getByName(&quot;ParagraphStyles&quot;)
-  If oStyles.HasByName(sStyleName) Then
-    Exit Sub
-  End If
-  oStyle = ThisComponent.createInstance(&quot;com.sun.star.style.ParagraphStyle&quot;)
-  For i=LBound(oProps) To UBound(oProps)
-    If oProps(i).Name = &quot;ParentStyle&quot; Then
-      If oStyles.HasByName(oProps(i).Value) Then
-        oStyle.ParentStyle = oProps(i).Value
-      Else
-        Print &quot;Parent paragraph style (&quot; &amp; oProps(i).Value &amp; _
-              &quot;) does not exist, ignoring parent&quot;
-      End If
-    ElseIf oProps(i).Name = &quot;ParaTabStops&quot; Then
-      tabStops = oProps(i).Value
-      Dim tab(0 To 19) As New com.sun.star.style.TabStop
-      For j =LBound(tab) To UBound(tab)
-        tab(j).Alignment = com.sun.star.style.TabAlign.LEFT
-        tab(j).DecimalChar = ASC(&quot;.&quot;)
-        tab(j).FillChar = 32
-        tab(j).Position = (j+1) * tabStops
-      Next
-      oStyle.ParaTabStops = tab
-    ElseIf oProps(i).Name = &quot;FollowStyle&quot; Then
-      If oStyles.HasByName(oProps(i).Value) OR oProps(i).Value = sStyleName Then
-        oStyle.setPropertyValue(oProps(i).Name, oProps(i).Value)
-      Else
-        Print &quot;Next paragraph style (&quot; &amp; oProps(i).Value &amp; _
-              &quot;) does not exist, ignoring for style &quot; &amp; sStyleName
-      End If
-    Else
-      oStyle.setPropertyValue(oProps(i).Name, oProps(i).Value)
-    End If
-  Next
-  oStyles.insertByName(sStyleName, oStyle)
-End Sub
-
-
-
-
-
-Function CheckDialogOpen() AS BOOLEAN
-	Dim i as integer
-	CheckDialogOpen = FALSE
-	for i= StarDesktop.Frames.Count-1 to 0 step -1
-	  oF = StarDesktop.Frames.getByIndex(i)
-	  if oF.Name = &quot;PlantUMLFrame&quot; then
-	    CheckDialogOpen = TRUE
-	  endif
-	next i
-End Function
-
 
 
 
 Sub UpdateProgressBar( index as integer, count as integer )
-
 			StatusText(&quot;PlantUML: &quot; &amp;  index &amp; &quot; / &quot; &amp; count )
-
 End Sub
 
-Sub StatusText(TextToWrite as String)
-  Dim iLen As Integer
-  Dim iRest as Integer
-  
-  iLen = Len(TextToWrite)
-  iRest = 270-iLen
-  ProgressBar.start(TextToWrite+SPACE(iRest),0)
 
-End Sub
-
-Function ProgressBar
-  ProgressBar = ThisComponent.CurrentController.StatusIndicator
-End Function
 </script:module>
