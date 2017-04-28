@@ -13,7 +13,7 @@
 							<value>com.sun.star.text.TextDocument</value>
 						</prop>
 						<prop oor:name="URL" oor:type="xs:string">
-							<value>vnd.sun.star.script:PlantUML.Module1.PlantUMLAll?language=Basic&amp;location=application</value>
+							<value>vnd.sun.star.script:PlantUML.PlantUML.PlantUMLAll?language=Basic&amp;location=application</value>
 						</prop>
 						<prop oor:name="Title" oor:type="xs:string">
 							<value>UML.*</value>
@@ -27,7 +27,7 @@
 							<value>com.sun.star.text.TextDocument</value>
 						</prop>
 						<prop oor:name="URL" oor:type="xs:string">
-							<value>vnd.sun.star.script:PlantUML.Module1.PlantUMLToggle?language=Basic&amp;location=application</value>
+							<value>vnd.sun.star.script:PlantUML.PlantUML.PlantUMLToggle?language=Basic&amp;location=application</value>
 						</prop>
 						<prop oor:name="Title" oor:type="xs:string">
 							<value>UML!</value>
