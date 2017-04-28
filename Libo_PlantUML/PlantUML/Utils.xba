@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE script:module PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "module.dtd">
+<script:module xmlns:script="http://openoffice.org/2000/script" script:name="Utils" script:language="StarBasic">REM  *****  BASIC  *****
+
+
+
+&apos; oDoc - document to contain the image. 
+&apos; oCurs - Cursor where the image is added
+&apos; sURL - URL of the image to insert.
+&apos; sParStyle - set the paragraph style to this.
+&apos; This function is taken from Andrews macro book. Changed anchor to paragraph.
+&apos;
+Sub EmbedGraphic(oDoc, oCurs, sURL$, sParStyle$)
+  Dim oShape
+  Dim oGraph     &apos;The graphic object is text content.
+  Dim oProvider  &apos;GraphicProvider service.
+  Dim oText
+
+  oShape = oDoc.createInstance(&quot;com.sun.star.drawing.GraphicObjectShape&quot;)
+  oGraph = oDoc.createInstance(&quot;com.sun.star.text.GraphicObject&quot;)
+
+  oDoc.getDrawPage().add(oShape)
+
+  oProvider = createUnoService(&quot;com.sun.star.graphic.GraphicProvider&quot;)
+
+  Dim oProps(0) as new com.sun.star.beans.PropertyValue
+  oProps(0).Name  = &quot;URL&quot;
+  oProps(0).Value = sURL
+
+  REM Save the original size.
+  Dim oSize100thMM
+  Dim lHeight As Long
+  Dim lWidth As Long
+  oSize100thMM = RecommendGraphSize(oDoc, oCurs, oProvider.queryGraphicDescriptor(oProps))
+  If NOT IsNull(oSize100thMM) AND NOT IsEmpty(oSize100thMM) Then
+    lHeight = oSize100thMM.Height
+    lWidth = oSize100thMM.Width
+  End If
+
+
+  oShape.Graphic = oProvider.queryGraphic(oProps())
+  oGraph.graphicurl = oShape.graphicurl
+  oGraph.AnchorType = com.sun.star.text.TextContentAnchorType.AT_PARAGRAPH
+  oGraph.TextWrap = com.sun.star.text.WrapTextMode.NONE 
+  oGraph.HoriOrient = com.sun.star.text.HoriOrientation.CENTER
+
+  oText= oCurs.getText()
+  oText.insertTextContent(oCurs, oGraph, false)
+  oDoc.getDrawPage().remove(oShape)
+
+  If lHeight &gt; 0 AND lWidth &gt; 0 Then
+    Dim oSize
+    oSize = oGraph.Size
+    oSize.Height = lHeight
+    oSize.Width = lWidth
+    oGraph.Size = oSize
+  End If
+  
+  &apos; Set the paragraph style if it is in the document.
+  Dim oStyles
+  oStyles = oDoc.StyleFamilies.getByName(&quot;ParagraphStyles&quot;)
+  If oStyles.hasByName(sParStyle) Then
+    oCurs.ParaStyleName = sParStyle
+  End If
+End Sub
+
+
+&apos; This function is taken from Andrews macro book.
+&apos;
+
+
+
+
+
+
+Sub StatusText(TextToWrite as String)
+  Dim iLen As Integer
+  Dim iRest as Integer
+  
+  iLen = Len(TextToWrite)
+  iRest = 270-iLen
+  ThisComponent.CurrentController.StatusIndicator.start(TextToWrite+SPACE(iRest),0)
+
+End Sub
+
+Sub SaveFile (mytext, filename)
+	fileAccessService = createUnoService(&quot;com.sun.star.ucb.SimpleFileAccess&quot;)
+	textOutputStream = createUnoService(&quot;com.sun.star.io.TextOutputStream&quot;)
+	outputStream = fileAccessService.openFileWrite( filename )
+	outputStream.truncate()
+	textOutputStream.setOutputStream(outputStream)	
+	textOutputStream.writeString( mytext )
+	textOutputStream.closeOutput()
+End sub
+</script:module>
