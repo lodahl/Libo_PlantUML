@@ -92,4 +92,28 @@ Sub SaveFile (mytext, filename)
 	textOutputStream.writeString( mytext )
 	textOutputStream.closeOutput()
 End sub
+
+Sub test
+Print getUrl
+End sub
+
+Function getUrl()
+   oPSM = GetProcessServiceManager().DefaultContext()
+   oFac = oPSM.getValueByName(&quot;/singletons/com.sun.star.deployment.thePackageManagerFactory&quot;)
+   oMan = oFac.getPackageManager(&quot;user&quot;)
+   oExt() = oMan.getDeployedPackages(null, null)
+
+  For i = LBound(oExt) to UBound(oExt)
+      if oExt(i).getDisplayName() = &quot;PlantUML in LibreOffice&quot; then
+
+		Part2= right(oExt(i).URL, len(oExt(i).URL)-57)
+		oPathSub = CreateUnoService( &quot;com.sun.star.util.PathSubstitution&quot; )
+
+		Part1= oPathSub.getSubstituteVariableValue(&quot;user&quot;) 
+		CompleteUrl=  Part1 &amp; &quot;/uno_packages/cache/uno_packages/&quot; &amp; Part2
+		getUrl = CompleteUrl
+
+      endif
+   Next i
+End Function
 </script:module>

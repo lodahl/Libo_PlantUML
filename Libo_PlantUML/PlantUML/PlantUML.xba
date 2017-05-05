@@ -9,7 +9,11 @@
 
 Sub Main
 
- UpdateProgressBar(1,2)
+&apos;oLib = GlobalScope.BasicLibraries.getByName(&quot;PlantUML&quot;)
+oPathSettings = CreateUnoService(&quot;com.sun.star.util.PathSettings&quot;)
+PathSubstService = CreateUnoService(&quot;com.sun.star.util.PathSubstitution&quot;)
+Print PathSubstService(&quot;work&quot;)
+Print dir(converttourl(&quot;/&quot;)
 	&apos;PlantUMLAll
 	&apos;PlantUMLToggle
 End Sub
@@ -118,7 +122,7 @@ Function pmxPlantUmlDir() As String
 
 	&apos; c:\documents and settings\&lt;username&gt;\plantuml\
 	&apos; /home/&lt;username&gt;/plantuml/
-	pmxPlantUmlDir = oPathSettings.Work &amp; &quot;/plantuml/&quot;
+	pmxPlantUmlDir = getUrl &amp; &quot;/java/&quot;
 End Function
 
 
