@@ -156,8 +156,8 @@ Sub PlantUMLAll
 	oDoc = ThisComponent
 	
     On Error Goto JavaErrorHandler
-    
-    If Not FileExists( pmxPlantUmlDir() &amp; &quot;/plantuml.jar&quot; ) Then Goto JavaErrorHandler
+
+    If Not FileExists( pmxPlantUmlDir() &amp; &quot;plantuml.jar&quot; ) Then Goto JavaErrorHandler
 	
 	Shell( javacmd, 2, &quot; -version&quot;, TRUE )
 
