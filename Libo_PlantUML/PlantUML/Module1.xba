@@ -73,6 +73,7 @@ Function pmxPlantUmlDir() As String
 
 	&apos; c:\documents and settings\&lt;username&gt;\plantuml\
 	&apos; /home/&lt;username&gt;/plantuml/
+	&apos; /Users/&lt;username&gt;/plantuml/
 	pmxPlantUmlDir = oPathSettings.Work &amp; &quot;/plantuml/&quot;
 End Function
 
