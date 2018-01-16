@@ -73,6 +73,7 @@ Function pmxPlantUmlDir() As String
 
 	&apos; c:\documents and settings\&lt;username&gt;\plantuml\
 	&apos; /home/&lt;username&gt;/plantuml/
+	&apos; /Users/&lt;username&gt;/plantuml/
 	pmxPlantUmlDir = oPathSettings.Work &amp; &quot;/plantuml/&quot;
 End Function
 
@@ -182,14 +183,14 @@ Sub PlantUMLAll
 			WriteTempFile( vSelection, tempFile &amp; &quot;.txt&quot;  )
 
 			Dim shellparam as String
-			shellparam =  &quot; -jar &quot;&quot;&quot; &amp; ConvertFromURL( tempFile ) &amp; &quot;.jar&quot;&quot; -charset UTF-8 &quot;&quot;&quot; &amp; ConvertFromURL( tempFile ) &amp; &quot;.txt&quot;&quot;&quot;
+			shellparam =  &quot; -jar &quot;&quot;&quot; &amp; ConvertFromURL( tempFile ) &amp; &quot;.jar&quot;&quot; -svg -charset UTF-8 &quot;&quot;&quot; &amp; ConvertFromURL( tempFile ) &amp; &quot;.txt&quot;&quot;&quot;
 
 			Shell( javacmd, 2, shellparam, TRUE )
 
 			RemovePreviousGraphics( vSelection )
 
 			Dim myUrl$
-			myUrl$ = ConvertToURL( tempFile &amp; &quot;.png&quot; )
+			myUrl$ = ConvertToURL( tempFile &amp; &quot;.svg&quot; )
 		    If FileExists(myUrl) Then
 
 				Dim oPar		&apos; Current paragraph
@@ -251,7 +252,7 @@ Sub PlantUMLAll
 
 ErrorHandler:
 	CloseProgressDialog()
-	MsgBox( &quot;An error occurred. Check HOME/plantuml/plantuml.txt and HOME/plantuml/plantuml.png for further info&quot;, 64, &quot;PlantUML&quot; )
+	MsgBox( &quot;An error occurred. Check HOME/plantuml/plantuml.txt and HOME/plantuml/plantuml.svg for further info&quot;, 64, &quot;PlantUML&quot; )
 	Exit Sub
 
 JavaErrorHandler:
@@ -281,7 +282,7 @@ End Function
 
 
 &apos; This function will save a single diagram text to the temp file.
-&apos; Notice that &quot;@startuml img/something.png&quot; is replaced by &quot;@startuml&quot;
+&apos; Notice that &quot;@startuml img/something.svg&quot; is replaced by &quot;@startuml&quot;
 &apos;
 Sub WriteTempFile( oCurs, fileName )
 	Dim mytext
