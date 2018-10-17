@@ -26,6 +26,9 @@ Please contact me if you can confirm that it runs on Mac as well.
 
 ## History
 
+* 17.10.2018: Added support for LibreOffice 6.1
+              Checking for cursor is in a table
+              Some minor fixes to UI.
 * 27.04.2017: Create new develop branch
 * 27.04.2017: Removed progress dialog and replaced with status bar.
 
