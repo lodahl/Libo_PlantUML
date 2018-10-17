@@ -39,7 +39,14 @@ Sub EmbedGraphic(oDoc, oCurs, sURL$, sParStyle$)
 
 
   oShape.Graphic = oProvider.queryGraphic(oProps())
-  oGraph.graphicurl = oShape.graphicurl
+
+  REM taking care of change in oShape in LibreOffice 6.1
+  If getSolarversion &lt; 60100 then
+	  oGraph.graphicurl = oShape.graphicurl
+  else
+	  oGraph.graphicurl = oShape.graphic
+  end if
+  
   oGraph.AnchorType = com.sun.star.text.TextContentAnchorType.AT_PARAGRAPH
   oGraph.TextWrap = com.sun.star.text.WrapTextMode.NONE 
   oGraph.HoriOrient = com.sun.star.text.HoriOrientation.CENTER
@@ -110,7 +117,7 @@ Function getUrl()
 		oPathSub = CreateUnoService( &quot;com.sun.star.util.PathSubstitution&quot; )
 
 		Part1= oPathSub.getSubstituteVariableValue(&quot;user&quot;) 
-		CompleteUrl=  Part1 &amp; &quot;/uno_packages/cache/uno_packages/&quot; &amp; Part2
+		CompleteUrl=  Part1 &amp; &quot;/uno_packages/cache/uno_packages&quot; &amp; Part2
 		getUrl = CompleteUrl
 
       endif
