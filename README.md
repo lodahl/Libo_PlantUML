@@ -1,11 +1,22 @@
 # PlantUML macro in LibreOffice
 
-## Compile
+# Compile
 
 Just run ./make.sh Libo_PlantUML (on linux)
 
+<<<<<<< HEAD
 ## Test
+=======
 
+## Use
+
+The extension is currently dependent on you having plantuml.jar like HOME/plantuml/plantuml.jar
+
+On Linux this is /users/[user]/plantuml/plantuml.jar
+On Windows this is in C:\Users\[user]\Documents\plantuml\plantuml.jar
+
+## Status
+>>>>>>> eb0fa99d66cdf9b6b96b2f23280e46f6110c9939
 Tested on 
 
 * Ubuntu 16.10 64bit
