@@ -44,7 +44,7 @@ Sub EmbedGraphic(oDoc, oCurs, sURL$, sParStyle$)
   If getSolarversion &lt; 60100 then
 	  oGraph.graphicurl = oShape.graphicurl
   else
-	  oGraph.graphicurl = oShape.graphic
+	  oGraph.graphic = oShape.graphic
   end if
   
   oGraph.AnchorType = com.sun.star.text.TextContentAnchorType.AT_PARAGRAPH
