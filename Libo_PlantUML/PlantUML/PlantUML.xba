@@ -166,7 +166,7 @@ Sub PlantUMLAll
 	Dim oProps()
 	CreateParStyle( &quot;PlantUML&quot;, oProps )
 
-	&apos; Create search parameters &quot;@startuml&quot;
+	&apos;Create search parameters &quot;@startuml&quot;
     vOpenSearch = oDoc.createSearchDescriptor
 	vCloseSearch = oDoc.createSearchDescriptor
     vOpenSearch.SearchString = &quot;@startuml&quot;
@@ -177,7 +177,14 @@ Sub PlantUMLAll
 	&apos; - Validate syntax, i.e. matching @startuml and @enduml
 	vOpenFound = oDoc.findFirst(vOpenSearch)
 	while Not isNull(vOpenFound)
+		
 		vCloseFound = oDoc.FindNext(vOpenFound.End, vCloseSearch)
+		
+		If IsEmpty(vOpenFound.TextTable)=False Then
+				MsgBox( &quot;PlantUML cannot be in a table&quot;, 64, &quot;PlantUML&quot; )
+			Exit Sub
+	    End If
+
 
 		If IsNull( vCloseFound ) Then
 			MsgBox( &quot;Found an open @startuml without closing @enduml&quot;, 64, &quot;PlantUML&quot; )
@@ -212,12 +219,14 @@ Sub PlantUMLAll
 
 	&apos; Second round, do the actual work
 	vOpenFound = oDoc.findFirst(vOpenSearch)
+
+	
 	while Not isNull(vOpenFound)
 		vCloseFound = oDoc.FindNext(vOpenFound.End, vCloseSearch)
 
 		vSelection = vOpenFound
 		vSelection.GotoRange(vCloseFound,True)
-		
+
 		iSelectionIndex = iSelectionIndex  + 1
 		UpdateProgressBar(iSelectionIndex, iSelectionCount )
 		&apos;Wait 100
@@ -293,7 +302,7 @@ Sub PlantUMLAll
 
 ErrorHandler:
 
-	MsgBox( &quot;An error occurred. Check HOME/plantuml/plantuml.txt and HOME/plantuml/plantuml.png for further info&quot;, 64, &quot;PlantUML&quot; )
+	MsgBox( &quot;An error occurred. Check &quot; &amp; ConvertFromURL(pmxPlantUmlDir()) &amp; &quot; for further info&quot;, 64, &quot;PlantUML&quot; )
 	Exit Sub
 
 JavaErrorHandler:
