@@ -169,8 +169,8 @@ Sub PlantUMLAll
 	&apos;Create search parameters &quot;@startuml&quot;
     vOpenSearch = oDoc.createSearchDescriptor
 	vCloseSearch = oDoc.createSearchDescriptor
-    vOpenSearch.SearchString = &quot;@startuml&quot;
-	vCloseSearch.SearchString = &quot;@enduml&quot;
+    vOpenSearch.SearchString = &quot;@start&quot;
+	vCloseSearch.SearchString = &quot;@end&quot;
 
 
 	&apos; First round:
@@ -185,6 +185,11 @@ Sub PlantUMLAll
 			Exit Sub
 	    End If
 
+		If IsEmpty(vOpenFound.TextFrame)=False Then
+				MsgBox( &quot;PlantUML cannot be in a frame&quot;, 64, &quot;PlantUML&quot; )
+			Exit Sub
+	    End If
+
 
 		If IsNull( vCloseFound ) Then
 			MsgBox( &quot;Found an open @startuml without closing @enduml&quot;, 64, &quot;PlantUML&quot; )
@@ -192,7 +197,6 @@ Sub PlantUMLAll
 	    End If
 
 		vSelection = vOpenFound
-	
 		vSelection.GotoRange(vCloseFound,True)
 		IF CheckExtraOpen( vSelection ) Then
 			MsgBox( &quot;Found extra @startuml between @startuml and @enduml&quot;, 64, &quot;PlantUML&quot; )
@@ -277,12 +281,16 @@ Sub PlantUMLAll
 				WEnd
 
 				&apos; Second run. Set the last empty line paragraph style to &quot;Default&quot;
-				&apos; Mark this last paragraph for use in EmbedGraphic
+				&apos; Mark this last paragraph for use in EmbedGraphich
+				&apos;vSelection is the complete block
+				&apos;oPar is this (last) paragraph
+				&apos;oParPrev is the second last paragraph (empty).
 			  	oParEnum = vSelection.createEnumeration()
 				While oParEnum.hasMoreElements()
 					oPar = oParEnum.nextElement()
 					IF NOT oParEnum.hasMoreElements() Then
 						If oPar.supportsService(&quot;com.sun.star.text.Paragraph&quot;) Then
+						&apos;This paragraph is last and previous is the the empty one
 							oParPrev.ParaStyleName = &quot;Standard&quot;
 							&apos;oParPrev.ParaStyleName = &quot;Default&quot;
 						End If
@@ -291,6 +299,7 @@ Sub PlantUMLAll
 					End If
 				WEnd
 				If Not IsNull( oParPrev ) Then
+					&apos;InsertImage(myUrl)
 					EmbedGraphic(oDoc, oParPrev.getStart(), myUrl, &quot;OOoFigure&quot;)
 				End If
 			End If
@@ -338,20 +347,22 @@ Sub WriteTempFile( oCurs, fileName )
 	Dim mytext
 	Dim oPar
 	Dim oParEnum
-	Dim count
 
-	mytext = &quot;@startuml&quot; &amp; chr(10)
-	count = 0
+	mytext = &quot;&quot;
+
   	oParEnum = oCurs.createEnumeration()
-	While oParEnum.hasMoreElements()
-		oPar = oParEnum.nextElement()
 
+
+	While oParEnum.hasMoreElements()
+		oPar = oParEnum.nextElement()			
 		If oPar.supportsService(&quot;com.sun.star.text.Paragraph&quot;) Then
-			If count &gt; 0 Then
+			
 				mytext = mytext &amp; oPar.getString() &amp; chr(10)
-			End If
-			count = count + 1
+			
+		
+
 		End If
+
 	WEnd	
 
 	&apos; Save the contents of mytext to file

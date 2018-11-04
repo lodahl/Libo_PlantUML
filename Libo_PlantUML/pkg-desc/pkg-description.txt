@@ -1,6 +1,6 @@
 PlantUML.oxt
-UML.* : Perform the PlantUML operations
-UML! : Show / Hide the PlantUML code
+First icon perform the PlantUML operations.
+Secund icon toggle PlantUML code on and off.
 
 plantuml.jar is part of the package, so you don't need to get Plantuml your self.
 

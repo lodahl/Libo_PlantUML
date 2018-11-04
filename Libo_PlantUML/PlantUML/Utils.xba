@@ -75,10 +75,13 @@ End Sub
 &apos; This function is taken from Andrews macro book.
 &apos;
 
-
-
-
-
+Sub SetUrlTitle(imageDescription)
+    oDoc = thisComponent
+    oSelection=oDoc.getCurrentSelection()
+    If oSelection.supportsService(&quot;com.sun.star.text.TextGraphicObject&quot;) Then
+        oSelection.Description = imageDescription
+    Endif
+End Sub
 
 Sub StatusText(TextToWrite as String)
   Dim iLen As Integer
