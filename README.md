@@ -80,9 +80,17 @@ The section will contain the code that can be converted to a diagram image and t
 
 ## Encoding
 
-When inserting PlantUML from external source you might meet some issues with encoding. Default encoding the source as UTF-8 will import and link with errors, as LibreOffice is considering the content as ISO (in my case ISO 8859-1) and the diagram will be wrong encoded.
+When inserting PlantUML from external source you might meet some issues with encoding. Default encoding the source as UTF-8 will import and link with errors, as LibreOffice is considering the content as ISO (in my case ISO 8859-1) and the diagram will be wrong encoded. 
 
 If you encode the source file with the same encoding than LibreOffice, the the imported or linked files will render correctly.
+
+On Windows I use Notepad++ and encoding in UTF-8 BOM without problems.
+
+## Graphwiz missing
+
+On Windows I have discovered that sometimes PlantUML is complaining about Graphwiz not being present. 
+
+Download Graphwiz from here and install it. That solved the problem for me.
 
 # Compile
 
@@ -94,6 +102,9 @@ This extension has been tested with LibreOffice 6.0 and 6.1 on Windows and Linux
 
 ## History
 
+* 04.11.2018: 121
+  * Checking for cursor is in a textframe.
+  * Supports other types than PlantUML e.g., @startsalt and @startdot
 * 17.10.2018: 1.2.0:
   * Added support for LibreOffice 6.1
   * Checking for cursor is in a table
