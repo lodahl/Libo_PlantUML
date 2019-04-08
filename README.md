@@ -28,7 +28,7 @@ You have two options:
 
 If you cursor is placed inside a PlantUML code, you will generate only that diagram. If the cursor is outside PlantUML code, that will generate all PlantUMLs in the document.
 
-Click on the first icon called Make UML.
+Click on the first icon called Make UML ![Make UML](Libo_PlantUML/icons/08_26_transp.bmp "Make UML").
 
 The result is that the image of the diagram is added and the document now shows both the PlantUML code and the diagram.
 
@@ -52,7 +52,7 @@ The code will at this time be assigned the paragraph style by the name PlantUML.
 
 ## Hiding the code
 
-You can toggle viewing the code on and off with a click on the second button called Toggle source.
+You can toggle viewing the code on and off with a click on the second button called Toggle source ![Toggle source](Libo_PlantUML/icons/50_26_transp.bmp "Toggle source")
 
 ## Paragraph styles
 
@@ -98,10 +98,13 @@ Just run ./make.sh Libo_PlantUML (on linux)
 
 ## Test
 
-This extension has been tested with LibreOffice 6.0 and 6.1 on Windows and Linux.
+This extension has been tested with LibreOffice 6.0, 6.1 and 6.2 on Windows and Linux.
 
 ## History
 
+* 08.04.2019: 122
+  * Upgrade plantuml.jar to 1.2019.4
+  * Now supporting Mindmaps with @startmindmap and @endmindmap as well as Work Breakdown Structure with @startwbs and @endwbs.
 * 04.11.2018: 121
   * Checking for cursor is in a textframe.
   * Supports other types than PlantUML e.g., @startsalt and @startdot
