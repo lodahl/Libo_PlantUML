@@ -101,7 +101,8 @@ Just run ./make.sh Libo_PlantUML (on linux)
 This extension has been tested with LibreOffice 6.0, 6.1 and 6.2 on Windows and Linux.
 
 ## History
-
+* 21.09.2021 :123
+  * Upgrade plantuml.jar to 1.2021.10
 * 08.04.2019: 122
   * Upgrade plantuml.jar to 1.2019.4
   * Now supporting Mindmaps with @startmindmap and @endmindmap as well as Work Breakdown Structure with @startwbs and @endwbs.
